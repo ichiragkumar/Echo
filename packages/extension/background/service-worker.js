@@ -1,69 +1,102 @@
 // packages/extension/background/service-worker.js
 
 let ws = null;
+let recording = false;
 
+// WebSocket connection management
 function connect() {
-  if (ws) {
-    console.log("WebSocket already connected");
-    return;
-  }
-  
+  if (ws) return;
   ws = new WebSocket("ws://localhost:3000");
-
-  ws.onopen = () => {
-    console.log("WebSocket connection established");
-    ws.send("Hello from extension!");
-  };
-
+  ws.onopen = () => console.log("WebSocket connected");
   ws.onmessage = (event) => {
     console.log("Message from server:", event.data);
-    // Forward message to content script
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]) {
         chrome.tabs.sendMessage(tabs[0].id, { type: "FROM_BACKGROUND", payload: event.data });
       }
     });
   };
-
-  ws.onclose = () => {
-    console.log("WebSocket connection closed");
-    ws = null;
-  };
-
-  ws.onerror = (error) => {
-    console.error("WebSocket error:", error);
-    ws = null;
-  };
+  ws.onclose = () => { ws = null; console.log("WebSocket disconnected"); };
+  ws.onerror = (error) => { ws = null; console.error("WebSocket error:", error); };
 }
 
 function disconnect() {
   if (ws) {
     ws.close();
-    ws = null;
   }
 }
 
-chrome.runtime.onInstalled.addListener(() => {
-  console.log("Echo Extension Installed");
-});
+// Offscreen document management
+async function hasOffscreenDocument(path) {
+  const offscreenUrl = chrome.runtime.getURL(path);
+  const matchedClients = await clients.matchAll();
+  return matchedClients.some((c) => c.url === offscreenUrl);
+}
 
-// Listen for messages from the popup
+async function startRecording() {
+  if (recording) return;
+
+  connect(); // Ensure WebSocket is connected
+
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
+
+  if (!await hasOffscreenDocument('offscreen/offscreen.html')) {
+    await chrome.offscreen.createDocument({
+      url: 'offscreen/offscreen.html',
+      reasons: ['USER_MEDIA'],
+      justification: 'Recording tab audio',
+    });
+  }
+
+  chrome.runtime.sendMessage({
+    type: 'start-recording',
+    target: 'offscreen',
+    data: streamId,
+  });
+
+  recording = true;
+  chrome.action.setIcon({ path: 'assets/icon128-active.png' }); // Placeholder for active state icon
+}
+
+async function stopRecording() {
+  if (!recording) return;
+
+  chrome.runtime.sendMessage({
+    type: 'stop-recording',
+    target: 'offscreen',
+  });
+
+  recording = false;
+  chrome.action.setIcon({ path: 'assets/icon128.png' });
+  disconnect();
+}
+
+function toggleRecording() {
+  if (recording) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+}
+
+// Listen for messages from popup or other scripts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'TOGGLE_ECHO') {
-    if (ws) {
-      disconnect();
-    } else {
-      connect();
+    toggleRecording();
+  } else if (message.type === 'audio-chunk' && message.target === 'background') {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      // The data is a Blob, need to convert it to something sendable
+      // For now, let's just log its size
+      console.log('Received audio blob of size:', message.data.size);
+      ws.send(message.data);
     }
   }
 });
 
-chrome.action.onClicked.addListener((tab) => {
-  // Logic to start/stop the emotional subtitles
-  console.log("Echo action clicked on tab:", tab.id);
-    if (ws) {
-      disconnect();
-    } else {
-      connect();
-    }
+// Extension action
+chrome.action.onClicked.addListener(toggleRecording);
+
+chrome.runtime.onInstalled.addListener(() => {
+  console.log("Echo Extension Installed");
 });
