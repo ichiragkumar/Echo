@@ -75,5 +75,3 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Initial creation for development
 createOverlay();
-// Example of an update
-setTimeout(() => updateOverlay("Server says: The speaker is using a sarcastic tone."), 3000);

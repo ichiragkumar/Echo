@@ -6,7 +6,7 @@ let recording = false;
 // WebSocket connection management
 function connect() {
   if (ws) return;
-  ws = new WebSocket("ws://localhost:3000");
+  ws = new WebSocket("ws://localhost:3000/api/ws");
   ws.onopen = () => console.log("WebSocket connected");
   ws.onmessage = (event) => {
     console.log("Message from server:", event.data);

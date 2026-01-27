@@ -23,19 +23,29 @@ app.prepare().then(() => {
     }
   });
 
-  const wss = new WebSocketServer({ server });
+  const wss = new WebSocketServer({ noServer: true });
 
+  server.on('upgrade', (req, socket, head) => {
+    const { pathname } = parse(req.url, true);
+    if (pathname === '/api/ws') {
+      wss.handleUpgrade(req, socket, head, (ws) => {
+        wss.emit('connection', ws, req);
+      });
+    }
+  });
+  
   wss.on('connection', (ws) => {
-    console.log('WebSocket client connected');
+    console.log('WebSocket client connected to /api/ws');
 
     ws.on('message', (message) => {
-      console.log('received: %s', message);
-      // For now, just echo the message back
-      ws.send(`Echo: ${message}`);
+      console.log('received audio chunk of size:', message.length);
+      // Here is where you would process the audio with a model like Gemini.
+      // For now, we'll just simulate a response.
+      ws.send("Gemini is processing audio...");
     });
 
     ws.on('close', () => {
-      console.log('WebSocket client disconnected');
+      console.log('WebSocket client disconnected from /api/ws');
     });
 
     ws.on('error', (error) => {
