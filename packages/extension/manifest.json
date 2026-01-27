@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "Echo - Real-Time Accessibility Mirror",
+  "version": "0.1.0",
+  "description": "Provides real-time emotional subtitles and agentic social coaching.",
+  "permissions": [
+    "tabCapture",
+    "offscreen",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://localhost:3000/",
+    "https://*.twitter.com/",
+    "https://*.linkedin.com/",
+    "https://*.reddit.com/"
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content/content-script.js"]
+    }
+  ],
+  "action": {
+    "default_popup": "ui/popup.html",
+    "default_icon": {
+      "16": "assets/icon16.png",
+      "48": "assets/icon48.png",
+      "128": "assets/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "assets/icon16.png",
+    "48": "assets/icon48.png",
+    "128": "assets/icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["ui/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
