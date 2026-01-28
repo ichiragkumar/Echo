@@ -3,7 +3,11 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ 
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Echo - The Future of Perception",
@@ -17,7 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-black text-white`}>
+      <body className={`${inter.variable} font-sans bg-[var(--color-midnight)] text-[var(--color-grey-50)]`}>
         <Providers>{children}</Providers>
       </body>
     </html>
